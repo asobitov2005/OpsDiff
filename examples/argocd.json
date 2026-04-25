@@ -1,0 +1,11 @@
+[
+  {
+    "app": "api",
+    "time": "2026-04-25T14:05:00Z",
+    "revision": "abc1234",
+    "syncStatus": "Synced",
+    "healthStatus": "Healthy",
+    "operationPhase": "Succeeded",
+    "destinationNamespace": "prod"
+  }
+]

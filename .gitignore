@@ -1,5 +1,5 @@
 .opsdiff/
+.cache/
 bin/
 dist/
 coverage.out
-

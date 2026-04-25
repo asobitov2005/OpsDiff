@@ -1,108 +1,163 @@
 # OpsDiff Architecture
 
-OpsDiff is being built as a CLI-first Kubernetes incident intelligence tool.
+OpsDiff is a CLI-first Kubernetes incident intelligence tool.
 
-## Current v0.1 shape
+The core product question is:
 
-The current repository implements the foundation for:
+```text
+What changed before it broke?
+```
+
+## Current v0.5 shape
+
+The repository now implements:
 
 - `opsdiff snapshot`
 - `opsdiff compare`
 - `opsdiff timeline`
 - `opsdiff explain`
+- `opsdiff report`
+- `opsdiff watch`
 - `opsdiff doctor`
-- secret-safe normalization for Kubernetes resources
-- risk-aware diff output in table, JSON, and Markdown
-- runtime timeline correlation for Kubernetes events and pod signals
-- likely-cause ranking from diff plus runtime evidence
+- Kubernetes snapshot normalization
+- risk-aware diffing
+- runtime incident timeline building
+- imported Prometheus and ArgoCD events
+- likely-cause ranking
+- HTML report rendering
+- SQLite-backed watch mode storage
+- GitHub Action integration
 
 ## Why CLI-first
 
-The product question is not "can we draw charts?"
+The first hard problem is not UI polish. It is trustworthy incident correlation.
 
-The product question is "can we reliably answer what changed before it broke?"
-
-That means the first release should optimize for:
+The current shape optimizes for:
 
 - deterministic snapshots
-- safe normalization
-- readable diffs
+- safe secret handling
 - automation-friendly output
 - low operational overhead
+- CI and terminal usability
 
-Dashboard work before this layer is mature would slow down product validation.
+That is why the project still favors CLI, files, and HTML reports over a full dashboard.
 
-## Current runtime architecture
+## Runtime Architecture
 
 ```text
-kubectl credentials
-        |
-        v
-  opsdiff doctor
-  opsdiff snapshot
-  opsdiff timeline
-  opsdiff explain
-        |
-        v
-Kubernetes collectors
-        |
-        v
-normalized snapshot JSON
-runtime timeline events
-        |
-        v
-   diff engine
-signal timeline builder
- explain scorer
-        |
-        v
-table / json / markdown report
+kubeconfig + imported event files
+            |
+            v
+  opsdiff doctor / snapshot / timeline
+  opsdiff explain / report / watch
+            |
+            v
+ Kubernetes collectors     JSON importers
+            |                    |
+            +---------+----------+
+                      |
+                      v
+      normalized snapshots and timeline events
+                      |
+          +-----------+------------+
+          |                        |
+          v                        v
+      diff engine            timeline builder
+          |                        |
+          +-----------+------------+
+                      |
+                      v
+                explain scorer
+                      |
+          +-----------+------------+
+          |                        |
+          v                        v
+    table/json/markdown       html report
+                      |
+                      v
+                 SQLite store
 ```
 
-## Supported resource model
+## Main Components
 
-`v0.1` currently normalizes:
+`internal/kube`
 
-- `Deployment`
-- `ConfigMap`
-- `Secret` metadata and hashed values
-- `Service`
-- `Ingress`
-- `HorizontalPodAutoscaler`
+- snapshot collection
+- timeline collection
+- kubeconfig and client wiring
+- doctor checks
 
-## Security principles
+`internal/diff`
+
+- resource-aware diffing
+- risk level assignment
+
+`internal/explain`
+
+- symptom mapping
+- time proximity weighting
+- service and resource matching
+- ranked candidate output
+
+`internal/prometheus`
+
+- alert file import into the shared timeline model
+
+`internal/argocd`
+
+- sync event file import into the shared timeline model
+
+`internal/store`
+
+- snapshot file IO
+- SQLite persistence for watch mode
+
+`internal/report`
+
+- table, JSON, and Markdown renderers
+- HTML incident report renderer
+
+## Security Principles
 
 - read-only cluster access
-- no secret values stored
-- literal sensitive fields are hashed
-- secret values are represented as short SHA-256 digests
-- output is safe for CI logs and PR comments
+- no secret plaintext persistence
+- hashed secret diffing
+- local-first storage
+- output safe for CI logs and PR comments
 
-## Near-term roadmap
+## Delivered Roadmap
+
+`v0.1`
+
+- snapshot
+- compare
+- doctor
 
 `v0.2`
 
-- Kubernetes Events
-- pod restart evidence
-- OOMKilled and CrashLoopBackOff signals
-- filtered incident timeline output
+- runtime timeline
+- restart and failure signals
 
 `v0.3`
 
-- explain command
-- likely-cause ranking
-- symptom mapping
-- evidence-based score explanation
+- explain
+- ranking and evidence
 
 `v0.4`
 
-- ArgoCD collector
-- Prometheus alert import
-- HTML incident report
+- Prometheus import
+- ArgoCD import
+- HTML report
 
 `v0.5`
 
-- SQLite event store
-- GitHub Action
+- SQLite store
 - watch mode
-- optional web dashboard
+- GitHub Action
+
+## Next Direction
+
+- queryable historical incident storage
+- PR comment publishing
+- Helm chart and in-cluster agent
+- optional dashboard once the correlation engine is stable

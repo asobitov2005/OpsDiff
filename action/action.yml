@@ -1,0 +1,124 @@
+name: OpsDiff
+description: Run OpsDiff compare, explain, or report flows in GitHub Actions
+
+inputs:
+  mode:
+    description: compare, explain, or report
+    required: false
+    default: compare
+  before_snapshot:
+    description: Path to the before snapshot JSON file
+    required: true
+  after_snapshot:
+    description: Path to the after snapshot JSON file
+    required: true
+  kubeconfig:
+    description: Optional kubeconfig path for explain/report modes
+    required: false
+    default: ""
+  namespace:
+    description: Kubernetes namespace to inspect
+    required: false
+    default: default
+  from:
+    description: Lookback window for timeline/explain/report modes
+    required: false
+    default: 2h
+  limit:
+    description: Maximum number of timeline events to collect
+    required: false
+    default: "200"
+  top:
+    description: Maximum number of ranked candidates to render
+    required: false
+    default: "5"
+  format:
+    description: Output format for compare/explain modes
+    required: false
+    default: table
+  prometheus_file:
+    description: Optional Prometheus alert export JSON file
+    required: false
+    default: ""
+  argocd_file:
+    description: Optional ArgoCD export JSON file
+    required: false
+    default: ""
+  report_out:
+    description: Output path for HTML reports
+    required: false
+    default: opsdiff-report.html
+
+outputs:
+  output_file:
+    description: File containing the captured CLI output
+    value: ${{ steps.run.outputs.output_file }}
+  report_file:
+    description: Generated HTML report path for report mode
+    value: ${{ steps.run.outputs.report_file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.23"
+
+    - name: Build OpsDiff
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$RUNNER_TEMP/opsdiff-bin"
+        go build -o "$RUNNER_TEMP/opsdiff-bin/opsdiff" ./cmd/opsdiff
+
+    - name: Run OpsDiff
+      id: run
+      shell: bash
+      run: |
+        set -euo pipefail
+        output_file="$RUNNER_TEMP/opsdiff-output.txt"
+        report_file=""
+
+        cmd=("$RUNNER_TEMP/opsdiff-bin/opsdiff")
+
+        if [[ -n "${{ inputs.kubeconfig }}" ]]; then
+          cmd+=(--kubeconfig "${{ inputs.kubeconfig }}")
+        fi
+
+        if [[ -n "${{ inputs.namespace }}" ]]; then
+          cmd+=(--namespace "${{ inputs.namespace }}")
+        fi
+
+        case "${{ inputs.mode }}" in
+          compare)
+            cmd+=(compare "${{ inputs.before_snapshot }}" "${{ inputs.after_snapshot }}" --format "${{ inputs.format }}")
+            ;;
+          explain)
+            cmd+=(explain "${{ inputs.before_snapshot }}" "${{ inputs.after_snapshot }}" --from "${{ inputs.from }}" --limit "${{ inputs.limit }}" --top "${{ inputs.top }}" --format "${{ inputs.format }}")
+            ;;
+          report)
+            cmd+=(report "${{ inputs.before_snapshot }}" "${{ inputs.after_snapshot }}" --from "${{ inputs.from }}" --limit "${{ inputs.limit }}" --top "${{ inputs.top }}" --out "${{ inputs.report_out }}")
+            report_file="${{ inputs.report_out }}"
+            ;;
+          *)
+            echo "unsupported mode: ${{ inputs.mode }}" >&2
+            exit 1
+            ;;
+        esac
+
+        if [[ -n "${{ inputs.prometheus_file }}" && "${{ inputs.mode }}" != "compare" ]]; then
+          cmd+=(--prometheus-file "${{ inputs.prometheus_file }}")
+        fi
+
+        if [[ -n "${{ inputs.argocd_file }}" && "${{ inputs.mode }}" != "compare" ]]; then
+          cmd+=(--argocd-file "${{ inputs.argocd_file }}")
+        fi
+
+        "${cmd[@]}" | tee "$output_file"
+
+        {
+          echo "output_file=$output_file"
+          echo "report_file=$report_file"
+        } >> "$GITHUB_OUTPUT"
+

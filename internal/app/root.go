@@ -31,6 +31,8 @@ func NewRootCommand() *cobra.Command {
 		newCompareCommand(),
 		newTimelineCommand(options),
 		newExplainCommand(options),
+		newReportCommand(options),
+		newWatchCommand(options),
 		newDoctorCommand(options),
 		newVersionCommand(),
 	)

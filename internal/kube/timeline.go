@@ -3,7 +3,6 @@ package kube
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/asobitov2005/OpsDiff/internal/model"
+	timelineutil "github.com/asobitov2005/OpsDiff/internal/timeline"
 )
 
 func (c *Collector) CollectTimeline(ctx context.Context, namespace string, from time.Duration, limit int) (model.Timeline, error) {
@@ -46,39 +46,7 @@ func (c *Collector) CollectTimeline(ctx context.Context, namespace string, from 
 	items := normalizeClusterEvents(events.Items, windowStart)
 	items = append(items, podSignalEvents(pods.Items, windowStart, windowEnd)...)
 
-	sort.Slice(items, func(i, j int) bool {
-		if !items[i].Time.Equal(items[j].Time) {
-			return items[i].Time.Before(items[j].Time)
-		}
-		if items[i].Severity != items[j].Severity {
-			return severityWeight(items[i].Severity) < severityWeight(items[j].Severity)
-		}
-		if items[i].ResourceKind != items[j].ResourceKind {
-			return items[i].ResourceKind < items[j].ResourceKind
-		}
-		return items[i].ResourceName < items[j].ResourceName
-	})
-
-	if limit > 0 && len(items) > limit {
-		items = items[len(items)-limit:]
-	}
-
-	for index := range items {
-		items[index].ID = fmt.Sprintf("evt_%03d", index+1)
-	}
-
-	timeline := model.Timeline{
-		Version:     "v1",
-		Cluster:     CurrentClusterName(rawConfig),
-		Namespace:   displayNamespace(namespace),
-		WindowStart: windowStart,
-		WindowEnd:   windowEnd,
-		GeneratedAt: windowEnd,
-		Events:      items,
-	}
-	timeline.Summary = summarizeTimeline(items)
-
-	return timeline, nil
+	return timelineutil.Build(CurrentClusterName(rawConfig), displayNamespace(namespace), windowStart, windowEnd, items, limit), nil
 }
 
 func normalizeClusterEvents(items []corev1.Event, windowStart time.Time) []model.TimelineEvent {
@@ -280,41 +248,6 @@ func fallbackPodTime(pod corev1.Pod, observedAt time.Time) time.Time {
 	return observedAt
 }
 
-func summarizeTimeline(items []model.TimelineEvent) model.TimelineSummary {
-	summary := model.TimelineSummary{Total: len(items)}
-	for _, item := range items {
-		switch item.Severity {
-		case "critical":
-			summary.Critical++
-		case "warning":
-			summary.Warning++
-		default:
-			summary.Info++
-		}
-
-		switch item.Category {
-		case "change":
-			summary.Changes++
-		case "symptom":
-			summary.Symptoms++
-		case "evidence":
-			summary.Evidence++
-		}
-
-		if item.Reason == "ContainerRestarted" {
-			summary.Restarts++
-		}
-		if hasRiskTag(item.RiskTags, "oomkilled") {
-			summary.OOMKills++
-		}
-		if hasRiskTag(item.RiskTags, "crashloop") {
-			summary.CrashLoops++
-		}
-	}
-
-	return summary
-}
-
 func riskTagsForReason(reason string) []string {
 	switch reason {
 	case "ScalingReplicaSet", "SuccessfulCreate", "SuccessfulDelete", "Killing", "Scheduled":
@@ -343,19 +276,6 @@ func hasRiskTag(tags []string, target string) bool {
 
 func compactMessage(value string) string {
 	return strings.Join(strings.Fields(value), " ")
-}
-
-func severityWeight(severity string) int {
-	switch severity {
-	case "info":
-		return 1
-	case "warning":
-		return 2
-	case "critical":
-		return 3
-	default:
-		return 0
-	}
 }
 
 func inferServiceName(labels map[string]string, objectName string, owners []metav1.OwnerReference) string {

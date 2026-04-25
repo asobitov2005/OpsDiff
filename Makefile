@@ -1,11 +1,14 @@
 APP := opsdiff
 BUILD_DIR := bin
 
-.PHONY: build test fmt
+.PHONY: build install test fmt
 
 build:
 	mkdir -p $(BUILD_DIR)
 	go build -ldflags "-X github.com/asobitov2005/OpsDiff/internal/app.Version=dev" -o $(BUILD_DIR)/$(APP) ./cmd/opsdiff
+
+install:
+	go install -ldflags "-X github.com/asobitov2005/OpsDiff/internal/app.Version=dev" ./cmd/opsdiff
 
 test:
 	go test ./...
