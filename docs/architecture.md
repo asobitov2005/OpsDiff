@@ -2,7 +2,7 @@
 
 OpsDiff is being built as a CLI-first Kubernetes incident intelligence tool.
 
-## Current v0.1 shape
+## Current v0.4 shape
 
 The current repository implements the foundation for:
 
@@ -10,11 +10,14 @@ The current repository implements the foundation for:
 - `opsdiff compare`
 - `opsdiff timeline`
 - `opsdiff explain`
+- `opsdiff report`
 - `opsdiff doctor`
 - secret-safe normalization for Kubernetes resources
 - risk-aware diff output in table, JSON, and Markdown
 - runtime timeline correlation for Kubernetes events and pod signals
 - likely-cause ranking from diff plus runtime evidence
+- imported ArgoCD and Prometheus events
+- HTML incident report output
 
 ## Why CLI-first
 
@@ -42,26 +45,30 @@ kubectl credentials
   opsdiff snapshot
   opsdiff timeline
   opsdiff explain
+  opsdiff report
         |
         v
 Kubernetes collectors
+JSON importers
         |
         v
 normalized snapshot JSON
 runtime timeline events
+imported timeline events
         |
         v
    diff engine
 signal timeline builder
  explain scorer
+ html report renderer
         |
         v
-table / json / markdown report
+table / json / markdown / html report
 ```
 
 ## Supported resource model
 
-`v0.1` currently normalizes:
+Current normalization covers:
 
 - `Deployment`
 - `ConfigMap`
@@ -96,7 +103,7 @@ table / json / markdown report
 
 `v0.4`
 
-- ArgoCD collector
+- ArgoCD JSON import
 - Prometheus alert import
 - HTML incident report
 

@@ -50,11 +50,14 @@ Implemented foundation:
 - `opsdiff compare`
 - `opsdiff timeline`
 - `opsdiff explain`
+- `opsdiff report`
 - `opsdiff doctor`
 - snapshot JSON storage
 - risk-aware diff output
 - filtered runtime timeline output
 - likely-cause ranking with score-based explanations
+- HTML incident report generation
+- ArgoCD and Prometheus JSON event imports
 - secret-safe hashing/redaction
 - GitHub Actions CI
 
@@ -85,6 +88,8 @@ Runtime signals:
 - pod restart evidence
 - `OOMKilled`
 - `CrashLoopBackOff`
+- imported Prometheus alerts
+- imported ArgoCD sync events
 
 Explain heuristics:
 
@@ -161,10 +166,31 @@ Inspect the last two hours of runtime signals:
 ./bin/opsdiff timeline --namespace prod --from 2h
 ```
 
+Inspect the timeline with imported alert and deploy events:
+
+```bash
+./bin/opsdiff timeline \
+  --namespace prod \
+  --from 2h \
+  --prometheus-file ./examples/alerts.json \
+  --argocd-file ./examples/argocd.json
+```
+
 Rank likely causes for an incident:
 
 ```bash
 ./bin/opsdiff explain before.json after.json --namespace prod --from 2h
+```
+
+Generate an HTML report:
+
+```bash
+./bin/opsdiff report before.json after.json \
+  --namespace prod \
+  --from 2h \
+  --prometheus-file ./examples/alerts.json \
+  --argocd-file ./examples/argocd.json \
+  --out report.html
 ```
 
 ## Example Output
@@ -209,6 +235,13 @@ Likely causes:
    check: Inspect pod memory usage and recent OOMKilled events
 ```
 
+HTML report:
+
+```text
+opsdiff report before.json after.json --out report.html
+HTML report written to report.html
+```
+
 ## Security
 
 OpsDiff is designed to be read-only by default.
@@ -223,12 +256,15 @@ OpsDiff is designed to be read-only by default.
 ```text
 cmd/opsdiff/           CLI entrypoint
 internal/app/          Cobra command wiring
+internal/argocd/       ArgoCD JSON event import
 internal/kube/         kubeconfig loading, collectors, doctor
 internal/diff/         risk-aware diff engine
 internal/explain/      likely-cause scoring and ranking
 internal/model/        normalized snapshot schema
+internal/prometheus/   Prometheus alert JSON import
 internal/report/       table/json/markdown output
 internal/store/        snapshot file persistence
+internal/timeline/     timeline merge and summarization helpers
 docs/architecture.md   product and technical direction
 ```
 
@@ -250,7 +286,7 @@ docs/architecture.md   product and technical direction
 
 `v0.4`
 
-- ArgoCD and Prometheus inputs
+- ArgoCD and Prometheus JSON imports
 - HTML incident report
 
 `v0.5`
