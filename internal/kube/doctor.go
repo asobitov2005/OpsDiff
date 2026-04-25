@@ -129,6 +129,26 @@ func RunDoctor(ctx context.Context, kubeconfigPath, namespace string) []Check {
 
 	checks = append(checks, listCheck(
 		ctx,
+		fmt.Sprintf("can list pods in %s", scopeLabel),
+		func() error {
+			_, err := clientset.CoreV1().Pods(scope).List(ctx, metav1.ListOptions{Limit: 1})
+			return err
+		},
+		fmt.Sprintf("grant list permission for pods in %s", scopeLabel),
+	))
+
+	checks = append(checks, listCheck(
+		ctx,
+		fmt.Sprintf("can list events in %s", scopeLabel),
+		func() error {
+			_, err := clientset.CoreV1().Events(scope).List(ctx, metav1.ListOptions{Limit: 1})
+			return err
+		},
+		fmt.Sprintf("grant list permission for events in %s", scopeLabel),
+	))
+
+	checks = append(checks, listCheck(
+		ctx,
 		fmt.Sprintf("can list ingresses in %s", scopeLabel),
 		func() error {
 			_, err := clientset.NetworkingV1().Ingresses(scope).List(ctx, metav1.ListOptions{Limit: 1})

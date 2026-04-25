@@ -48,9 +48,11 @@ Implemented foundation:
 
 - `opsdiff snapshot`
 - `opsdiff compare`
+- `opsdiff timeline`
 - `opsdiff doctor`
 - snapshot JSON storage
 - risk-aware diff output
+- filtered runtime timeline output
 - secret-safe hashing/redaction
 - GitHub Actions CI
 
@@ -73,6 +75,14 @@ Detected changes:
 - Service selector and port changes
 - Ingress route changes
 - HPA min/max and metric changes
+
+Runtime signals:
+
+- Kubernetes warning events
+- rollout evidence such as `ScalingReplicaSet`
+- pod restart evidence
+- `OOMKilled`
+- `CrashLoopBackOff`
 
 ## Tech Stack Verdict
 
@@ -135,6 +145,12 @@ Check connectivity and read permissions:
 ./bin/opsdiff doctor --namespace prod
 ```
 
+Inspect the last two hours of runtime signals:
+
+```bash
+./bin/opsdiff timeline --namespace prod --from 2h
+```
+
 ## Example Output
 
 ```text
@@ -147,6 +163,19 @@ HIGH  Deployment/api
       spec.template.spec.containers.api.resources.limits.memory: 512Mi -> 256Mi
 MED   Deployment/api
       spec.template.spec.containers.api.image: api:v1.8.2 -> api:v1.8.3
+```
+
+Timeline example:
+
+```text
+Namespace: prod
+Window: 2026-04-25T13:00:00Z -> 2026-04-25T15:00:00Z
+Summary: total=4 critical=2 warning=1 changes=1 symptoms=2 evidence=1 restarts=1 oomkills=1 crashloops=1
+
+[2026-04-25T14:05:00Z] INFO     CHANGE   service=api Deployment/api ScalingReplicaSet
+           Scaled up replica set api-7b6d9c8f6f to 3
+[2026-04-25T14:12:00Z] CRITICAL SYMPTOM  service=api Pod/api-7b6d9c8f6f-x2z9w OOMKilled
+           container api was OOMKilled
 ```
 
 ## Security
@@ -178,6 +207,7 @@ docs/architecture.md   product and technical direction
 - Kubernetes events
 - restart evidence
 - OOMKilled and CrashLoopBackOff hints
+- `opsdiff timeline`
 
 `v0.3`
 

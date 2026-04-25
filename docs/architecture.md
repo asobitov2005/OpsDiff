@@ -8,9 +8,11 @@ The current repository implements the foundation for:
 
 - `opsdiff snapshot`
 - `opsdiff compare`
+- `opsdiff timeline`
 - `opsdiff doctor`
 - secret-safe normalization for Kubernetes resources
 - risk-aware diff output in table, JSON, and Markdown
+- runtime timeline correlation for Kubernetes events and pod signals
 
 ## Why CLI-first
 
@@ -36,15 +38,18 @@ kubectl credentials
         v
   opsdiff doctor
   opsdiff snapshot
+  opsdiff timeline
         |
         v
 Kubernetes collectors
         |
         v
 normalized snapshot JSON
+runtime timeline events
         |
         v
    diff engine
+signal timeline builder
         |
         v
 table / json / markdown report
@@ -76,6 +81,7 @@ table / json / markdown report
 - Kubernetes Events
 - pod restart evidence
 - OOMKilled and CrashLoopBackOff signals
+- filtered incident timeline output
 
 `v0.3`
 
@@ -95,4 +101,3 @@ table / json / markdown report
 - GitHub Action
 - watch mode
 - optional web dashboard
-
