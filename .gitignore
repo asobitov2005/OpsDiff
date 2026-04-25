@@ -1,0 +1,5 @@
+.opsdiff/
+bin/
+dist/
+coverage.out
+
