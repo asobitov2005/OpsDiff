@@ -30,6 +30,7 @@ func NewRootCommand() *cobra.Command {
 		newSnapshotCommand(options),
 		newCompareCommand(),
 		newTimelineCommand(options),
+		newExplainCommand(options),
 		newDoctorCommand(options),
 		newVersionCommand(),
 	)

@@ -49,10 +49,12 @@ Implemented foundation:
 - `opsdiff snapshot`
 - `opsdiff compare`
 - `opsdiff timeline`
+- `opsdiff explain`
 - `opsdiff doctor`
 - snapshot JSON storage
 - risk-aware diff output
 - filtered runtime timeline output
+- likely-cause ranking with score-based explanations
 - secret-safe hashing/redaction
 - GitHub Actions CI
 
@@ -83,6 +85,14 @@ Runtime signals:
 - pod restart evidence
 - `OOMKilled`
 - `CrashLoopBackOff`
+
+Explain heuristics:
+
+- change risk weighting
+- service/resource correlation
+- symptom mapping
+- time proximity scoring
+- suggested follow-up checks
 
 ## Tech Stack Verdict
 
@@ -151,6 +161,12 @@ Inspect the last two hours of runtime signals:
 ./bin/opsdiff timeline --namespace prod --from 2h
 ```
 
+Rank likely causes for an incident:
+
+```bash
+./bin/opsdiff explain before.json after.json --namespace prod --from 2h
+```
+
 ## Example Output
 
 ```text
@@ -178,6 +194,21 @@ Summary: total=4 critical=2 warning=1 changes=1 symptoms=2 evidence=1 restarts=1
            container api was OOMKilled
 ```
 
+Explain example:
+
+```text
+Namespace: prod
+Snapshots: before.json -> after.json
+Change window: 2026-04-25T14:00:00Z -> 2026-04-25T14:05:00Z
+Summary: changes=4 ranked=4 critical_symptoms=2 warning_symptoms=0 evidence=1
+
+Likely causes:
+1. [100/100 HIGH] Deployment/api spec.template.spec.containers.api.resources.limits.memory: 512Mi -> 256Mi
+   evidence: HIGH risk change: memory limit changed
+   evidence: same service `api` showed runtime activity; symptom mapping matched on `memory`; memory-related runtime failure directly matches the changed field
+   check: Inspect pod memory usage and recent OOMKilled events
+```
+
 ## Security
 
 OpsDiff is designed to be read-only by default.
@@ -194,6 +225,7 @@ cmd/opsdiff/           CLI entrypoint
 internal/app/          Cobra command wiring
 internal/kube/         kubeconfig loading, collectors, doctor
 internal/diff/         risk-aware diff engine
+internal/explain/      likely-cause scoring and ranking
 internal/model/        normalized snapshot schema
 internal/report/       table/json/markdown output
 internal/store/        snapshot file persistence
@@ -214,6 +246,7 @@ docs/architecture.md   product and technical direction
 - `opsdiff explain`
 - symptom mapping
 - likely-cause ranking
+- suggested checks and evidence scoring
 
 `v0.4`
 
