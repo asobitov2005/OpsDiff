@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/opsdiff/opsdiff/internal/kube"
+	"github.com/asobitov2005/OpsDiff/internal/kube"
 )
 
 func RenderDoctor(checks []kube.Check, format string) (string, error) {

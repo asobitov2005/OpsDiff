@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/opsdiff/opsdiff/internal/model"
+	"github.com/asobitov2005/OpsDiff/internal/model"
 )
 
 type Collector struct {

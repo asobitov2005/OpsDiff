@@ -3,8 +3,8 @@ package app
 import (
 	"fmt"
 
-	"github.com/opsdiff/opsdiff/internal/kube"
-	"github.com/opsdiff/opsdiff/internal/report"
+	"github.com/asobitov2005/OpsDiff/internal/kube"
+	"github.com/asobitov2005/OpsDiff/internal/report"
 	"github.com/spf13/cobra"
 )
 

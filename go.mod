@@ -1,4 +1,4 @@
-module github.com/opsdiff/opsdiff
+module github.com/asobitov2005/OpsDiff
 
 go 1.22.0
 

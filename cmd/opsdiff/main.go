@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/opsdiff/opsdiff/internal/app"
+	"github.com/asobitov2005/OpsDiff/internal/app"
 )
 
 func main() {

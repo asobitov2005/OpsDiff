@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opsdiff/opsdiff/internal/model"
+	"github.com/asobitov2005/OpsDiff/internal/model"
 )
 
 func TestCompareDetectsHighRiskDeploymentAndConfigChanges(t *testing.T) {

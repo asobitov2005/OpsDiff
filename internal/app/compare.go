@@ -3,9 +3,9 @@ package app
 import (
 	"fmt"
 
-	"github.com/opsdiff/opsdiff/internal/diff"
-	"github.com/opsdiff/opsdiff/internal/report"
-	"github.com/opsdiff/opsdiff/internal/store"
+	"github.com/asobitov2005/OpsDiff/internal/diff"
+	"github.com/asobitov2005/OpsDiff/internal/report"
+	"github.com/asobitov2005/OpsDiff/internal/store"
 	"github.com/spf13/cobra"
 )
 

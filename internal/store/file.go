@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/opsdiff/opsdiff/internal/model"
+	"github.com/asobitov2005/OpsDiff/internal/model"
 )
 
 func WriteSnapshot(path string, snapshot model.Snapshot) error {

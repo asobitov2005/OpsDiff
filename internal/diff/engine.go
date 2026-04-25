@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opsdiff/opsdiff/internal/model"
+	"github.com/asobitov2005/OpsDiff/internal/model"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
