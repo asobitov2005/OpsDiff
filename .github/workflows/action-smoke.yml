@@ -1,0 +1,90 @@
+name: Action Smoke
+
+on:
+  push:
+    branches:
+      - main
+      - feat/**
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  compare-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create fixture snapshots
+        shell: bash
+        run: |
+          mkdir -p .tmp-fixtures
+          cat > .tmp-fixtures/before.json <<'EOF'
+          {
+            "version": "v1",
+            "cluster": "ci",
+            "namespace": "prod",
+            "created_at": "2026-04-25T14:00:00Z",
+            "resources": [
+              {
+                "kind": "Deployment",
+                "namespace": "prod",
+                "name": "api",
+                "deployment": {
+                  "containers": [
+                    {
+                      "name": "api",
+                      "image": "api:v1.0.0",
+                      "resources": {
+                        "memory_limit": "512Mi"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+          EOF
+          cat > .tmp-fixtures/after.json <<'EOF'
+          {
+            "version": "v1",
+            "cluster": "ci",
+            "namespace": "prod",
+            "created_at": "2026-04-25T14:05:00Z",
+            "resources": [
+              {
+                "kind": "Deployment",
+                "namespace": "prod",
+                "name": "api",
+                "deployment": {
+                  "containers": [
+                    {
+                      "name": "api",
+                      "image": "api:v1.0.1",
+                      "resources": {
+                        "memory_limit": "256Mi"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+          EOF
+
+      - name: Run local action in compare mode
+        id: opsdiff
+        uses: ./action
+        with:
+          mode: compare
+          before_snapshot: .tmp-fixtures/before.json
+          after_snapshot: .tmp-fixtures/after.json
+          format: markdown
+
+      - name: Assert action output exists
+        shell: bash
+        run: |
+          test -f "${{ steps.opsdiff.outputs.output_file }}"
+          grep -q "memory" "${{ steps.opsdiff.outputs.output_file }}"
+
