@@ -2,66 +2,35 @@
 
 Find what changed before your Kubernetes incident.
 
-OpsDiff is a CLI-first Kubernetes change intelligence tool. It captures normalized cluster snapshots, redacts sensitive values, and highlights the most suspicious changes between two points in time.
+OpsDiff is a CLI-first Kubernetes incident intelligence tool. It captures cluster snapshots, compares risky config and rollout changes, correlates runtime signals, and produces a ranked answer for the question:
+
+```text
+Prod broke. What changed before it broke?
+```
 
 ```text
 Monitoring tells you what is broken.
 OpsDiff tells you what changed before it broke.
 ```
 
-## Product Positioning
-
-OpsDiff is not trying to be another dashboard-heavy observability stack.
-
-The strongest first product is:
-
-- Kubernetes-native
-- secret-safe
-- risk-aware
-- CLI-first
-- CI-friendly
-
-That is why the repository starts with snapshot, compare, and doctor instead of a web UI.
-
-## Why No UI Yet
-
-For this product, UI is not the first bottleneck.
-
-The hard part is building a trustworthy answer engine:
-
-- normalize Kubernetes state safely
-- diff it correctly
-- rank changes by operational risk
-- make output usable in terminals, CI, and PR comments
-
-Until that core is solid, a dashboard mostly adds surface area and maintenance cost.
-
-Short version:
-
-- `v0.1`: no UI
-- `v0.2-v0.4`: HTML reports and timeline intelligence
-- `v0.5+`: optional dashboard
-
 ## Current Scope
 
-Implemented foundation:
+Implemented now:
 
 - `opsdiff snapshot`
 - `opsdiff compare`
 - `opsdiff timeline`
 - `opsdiff explain`
 - `opsdiff report`
+- `opsdiff watch`
 - `opsdiff doctor`
-- snapshot JSON storage
-- risk-aware diff output
-- filtered runtime timeline output
-- likely-cause ranking with score-based explanations
-- HTML incident report generation
-- ArgoCD and Prometheus JSON event imports
-- secret-safe hashing/redaction
-- GitHub Actions CI
+- secret-safe hashing and redaction
+- SQLite-backed watch mode storage
+- Prometheus alert JSON import
+- ArgoCD sync event JSON import
+- GitHub Action for compare, explain, and report flows
 
-Supported resources:
+Supported Kubernetes resources:
 
 - `Deployment`
 - `ConfigMap`
@@ -72,13 +41,13 @@ Supported resources:
 
 Detected changes:
 
-- container image changes
+- image changes
 - env var changes
-- CPU and memory request/limit changes
+- CPU and memory request or limit changes
 - ConfigMap key changes
 - Secret key hash changes
 - Service selector and port changes
-- Ingress route changes
+- Ingress rule changes
 - HPA min/max and metric changes
 
 Runtime signals:
@@ -91,155 +60,227 @@ Runtime signals:
 - imported Prometheus alerts
 - imported ArgoCD sync events
 
-Explain heuristics:
+## Install
 
-- change risk weighting
-- service/resource correlation
-- symptom mapping
-- time proximity scoring
-- suggested follow-up checks
+Prerequisites:
 
-## Tech Stack Verdict
+- Go `1.23+` if you build locally
+- a C toolchain if you want SQLite-backed `watch` mode in your local build
+- access to a Kubernetes cluster and kubeconfig for `snapshot`, `doctor`, `timeline`, `explain`, `report`, and `watch`
+- no cluster access is required for `compare` when you already have snapshot files
 
-The stack is mostly correct, but it needs sequencing discipline.
+Install directly from GitHub:
 
-Keep now:
+```bash
+go install github.com/asobitov2005/OpsDiff/cmd/opsdiff@main
+```
 
-- Go
-- Cobra
-- `client-go`
-- GitHub Actions
-- Helm later for the agent/chart side
-- GoReleaser when the first binary release is ready
+Build from a local checkout:
 
-Delay for later phases:
+```bash
+git clone https://github.com/asobitov2005/OpsDiff.git
+cd OpsDiff
+make build
+./bin/opsdiff version
+```
 
-- Viper
-- SQLite
-- React
-- Tailwind
+Install from a local checkout:
 
-Reason:
+```bash
+git clone https://github.com/asobitov2005/OpsDiff.git
+cd OpsDiff
+make install
+opsdiff version
+```
 
-`v0.1` should prove the incident-diff engine, not spread effort across config systems, storage layers, and frontend work.
+If your build environment does not have CGO enabled, the binary still builds, but `watch` will return an explicit SQLite support error until rebuilt with a C toolchain.
 
 ## Quickstart
 
+Offline compare with bundled example snapshots:
+
 ```bash
-go build -o bin/opsdiff ./cmd/opsdiff
+opsdiff compare examples/snapshots/before.json examples/snapshots/after.json
 ```
 
-Take a snapshot:
+Capture live snapshots from a cluster:
 
 ```bash
-./bin/opsdiff snapshot --namespace prod --out before.json
+opsdiff snapshot --namespace prod --out before.json
+opsdiff snapshot --namespace prod --out after.json
+opsdiff compare before.json after.json
 ```
 
-Take another snapshot later:
+Check access and required read permissions:
 
 ```bash
-./bin/opsdiff snapshot --namespace prod --out after.json
+opsdiff doctor --namespace prod
 ```
 
-Compare them:
+Inspect recent runtime signals:
 
 ```bash
-./bin/opsdiff compare before.json after.json
+opsdiff timeline --namespace prod --from 2h
 ```
 
-CI-friendly output:
+Correlate imported alert and sync events into the timeline:
 
 ```bash
-./bin/opsdiff compare before.json after.json --format json
-./bin/opsdiff compare before.json after.json --format markdown
-```
-
-Check connectivity and read permissions:
-
-```bash
-./bin/opsdiff doctor --namespace prod
-```
-
-Inspect the last two hours of runtime signals:
-
-```bash
-./bin/opsdiff timeline --namespace prod --from 2h
-```
-
-Inspect the timeline with imported alert and deploy events:
-
-```bash
-./bin/opsdiff timeline \
+opsdiff timeline \
   --namespace prod \
   --from 2h \
-  --prometheus-file ./examples/alerts.json \
-  --argocd-file ./examples/argocd.json
+  --prometheus-file examples/alerts.json \
+  --argocd-file examples/argocd.json
 ```
 
-Rank likely causes for an incident:
+Rank likely causes:
 
 ```bash
-./bin/opsdiff explain before.json after.json --namespace prod --from 2h
+opsdiff explain before.json after.json --namespace prod --from 2h
 ```
 
 Generate an HTML report:
 
 ```bash
-./bin/opsdiff report before.json after.json \
+opsdiff report before.json after.json \
   --namespace prod \
   --from 2h \
-  --prometheus-file ./examples/alerts.json \
-  --argocd-file ./examples/argocd.json \
+  --prometheus-file examples/alerts.json \
+  --argocd-file examples/argocd.json \
   --out report.html
 ```
 
+Run continuous collection with SQLite storage:
+
+```bash
+opsdiff watch \
+  --namespace prod \
+  --from 2h \
+  --interval 1m \
+  --db-path ~/.opsdiff/opsdiff.db \
+  --snapshot-dir ~/.opsdiff/snapshots
+```
+
+## Command Guide
+
+`compare`
+
+- works fully offline from two snapshot files
+- outputs `table`, `json`, or `markdown`
+
+`doctor`
+
+- validates kubeconfig loading
+- checks cluster connectivity
+- checks read permissions for supported resources, pods, and events
+
+`timeline`
+
+- reads live Kubernetes events and pod status signals
+- optionally merges imported Prometheus and ArgoCD JSON files
+
+`explain`
+
+- compares two snapshots
+- collects runtime signals from the cluster
+- ranks likely causes and suggested checks
+
+`report`
+
+- runs the same explain flow
+- writes a self-contained HTML report
+
+`watch`
+
+- polls snapshots on an interval
+- stores snapshots and timeline events in SQLite
+- prints diff summaries and top candidates for each cycle
+
+## Files And Storage
+
+Default local state directory:
+
+```text
+~/.opsdiff/
+  opsdiff.db
+  snapshots/
+```
+
+What is stored:
+
+- snapshot JSON files written by `snapshot` and `watch`
+- SQLite metadata and deduplicated timeline events written by `watch`
+
+What is not stored:
+
+- Kubernetes Secret plaintext values
+- cluster mutations or write operations
+
 ## Example Output
 
+Compare:
+
 ```text
 Namespace: prod
-Compared: before.json -> after.json
+Compared: examples/snapshots/before.json -> examples/snapshots/after.json
 
-HIGH  ConfigMap/api-config
-      data.DB_POOL_SIZE: 20 -> 100
 HIGH  Deployment/api
       spec.template.spec.containers.api.resources.limits.memory: 512Mi -> 256Mi
+HIGH  ConfigMap/api-config
+      data.DB_POOL_SIZE: 20 -> 100
 MED   Deployment/api
-      spec.template.spec.containers.api.image: api:v1.8.2 -> api:v1.8.3
+      spec.template.spec.containers.api.image: api:v1.0.0 -> api:v1.0.1
 ```
 
-Timeline example:
+Explain:
 
 ```text
-Namespace: prod
-Window: 2026-04-25T13:00:00Z -> 2026-04-25T15:00:00Z
-Summary: total=4 critical=2 warning=1 changes=1 symptoms=2 evidence=1 restarts=1 oomkills=1 crashloops=1
-
-[2026-04-25T14:05:00Z] INFO     CHANGE   service=api Deployment/api ScalingReplicaSet
-           Scaled up replica set api-7b6d9c8f6f to 3
-[2026-04-25T14:12:00Z] CRITICAL SYMPTOM  service=api Pod/api-7b6d9c8f6f-x2z9w OOMKilled
-           container api was OOMKilled
-```
-
-Explain example:
-
-```text
-Namespace: prod
-Snapshots: before.json -> after.json
-Change window: 2026-04-25T14:00:00Z -> 2026-04-25T14:05:00Z
-Summary: changes=4 ranked=4 critical_symptoms=2 warning_symptoms=0 evidence=1
-
 Likely causes:
 1. [100/100 HIGH] Deployment/api spec.template.spec.containers.api.resources.limits.memory: 512Mi -> 256Mi
    evidence: HIGH risk change: memory limit changed
-   evidence: same service `api` showed runtime activity; symptom mapping matched on `memory`; memory-related runtime failure directly matches the changed field
+   evidence: same service `api` showed runtime activity; symptom mapping matched on `memory`
    check: Inspect pod memory usage and recent OOMKilled events
 ```
 
-HTML report:
+## GitHub Action
 
-```text
-opsdiff report before.json after.json --out report.html
-HTML report written to report.html
+The repository ships a composite action at `action/action.yml`.
+
+Use it from another workflow like this:
+
+```yaml
+jobs:
+  opsdiff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: asobitov2005/OpsDiff/action@main
+        with:
+          mode: compare
+          before_snapshot: examples/snapshots/before.json
+          after_snapshot: examples/snapshots/after.json
+          format: markdown
+```
+
+Supported modes:
+
+- `compare`
+- `explain`
+- `report`
+
+For `explain` and `report`, provide cluster access and optionally imported files:
+
+```yaml
+- uses: asobitov2005/OpsDiff/action@main
+  with:
+    mode: report
+    before_snapshot: before.json
+    after_snapshot: after.json
+    namespace: prod
+    from: 2h
+    prometheus_file: examples/alerts.json
+    argocd_file: examples/argocd.json
+    report_out: opsdiff-report.html
 ```
 
 ## Security
@@ -248,50 +289,29 @@ OpsDiff is designed to be read-only by default.
 
 - no cluster mutations
 - no secret values stored
-- sensitive literal values hashed before persistence
-- secret diffs show only key-level SHA-256 digests
+- secret diffs use hashes, not plaintext
+- output is safe for CI logs and PR comments
 
-## Repository Layout
+## Documentation
 
-```text
-cmd/opsdiff/           CLI entrypoint
-internal/app/          Cobra command wiring
-internal/argocd/       ArgoCD JSON event import
-internal/kube/         kubeconfig loading, collectors, doctor
-internal/diff/         risk-aware diff engine
-internal/explain/      likely-cause scoring and ranking
-internal/model/        normalized snapshot schema
-internal/prometheus/   Prometheus alert JSON import
-internal/report/       table/json/markdown output
-internal/store/        snapshot file persistence
-internal/timeline/     timeline merge and summarization helpers
-docs/architecture.md   product and technical direction
-```
+- [Quickstart](docs/quickstart.md)
+- [Integrations](docs/integrations.md)
+- [Security](docs/security.md)
+- [Architecture](docs/architecture.md)
 
 ## Roadmap
 
-`v0.2`
+Delivered:
 
-- Kubernetes events
-- restart evidence
-- OOMKilled and CrashLoopBackOff hints
-- `opsdiff timeline`
+- `v0.1` snapshot, compare, doctor
+- `v0.2` runtime timeline
+- `v0.3` explain and ranking
+- `v0.4` imported events and HTML report
+- `v0.5` SQLite store, watch mode, GitHub Action
 
-`v0.3`
+Next:
 
-- `opsdiff explain`
-- symptom mapping
-- likely-cause ranking
-- suggested checks and evidence scoring
-
-`v0.4`
-
-- ArgoCD and Prometheus JSON imports
-- HTML incident report
-
-`v0.5`
-
-- SQLite event store
-- GitHub Action
-- watch mode
-- optional UI
+- richer event persistence queries
+- PR comment publishing flow
+- Helm chart and in-cluster agent
+- optional web dashboard

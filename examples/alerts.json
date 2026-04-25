@@ -1,0 +1,28 @@
+[
+  {
+    "status": "firing",
+    "startsAt": "2026-04-25T14:12:00Z",
+    "labels": {
+      "alertname": "HighLatency",
+      "severity": "critical",
+      "namespace": "prod",
+      "service": "api"
+    },
+    "annotations": {
+      "summary": "API latency is elevated"
+    }
+  },
+  {
+    "status": "firing",
+    "startsAt": "2026-04-25T14:14:00Z",
+    "labels": {
+      "alertname": "DatabaseErrors",
+      "severity": "warning",
+      "namespace": "prod",
+      "service": "api"
+    },
+    "annotations": {
+      "summary": "Database error rate increased"
+    }
+  }
+]

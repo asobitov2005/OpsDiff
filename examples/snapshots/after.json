@@ -1,0 +1,42 @@
+{
+  "version": "v1",
+  "cluster": "demo",
+  "namespace": "prod",
+  "created_at": "2026-04-25T14:05:00Z",
+  "resources": [
+    {
+      "kind": "Deployment",
+      "namespace": "prod",
+      "name": "api",
+      "deployment": {
+        "replicas": 3,
+        "containers": [
+          {
+            "name": "api",
+            "image": "api:v1.0.1",
+            "resources": {
+              "memory_limit": "256Mi"
+            },
+            "env": [
+              {
+                "name": "DB_POOL_SIZE",
+                "type": "literal",
+                "value": "100"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "ConfigMap",
+      "namespace": "prod",
+      "name": "api-config",
+      "config_map": {
+        "data": {
+          "DB_POOL_SIZE": "100"
+        }
+      }
+    }
+  ]
+}
