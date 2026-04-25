@@ -166,7 +166,7 @@ const incidentHTMLTemplate = `<!DOCTYPE html>
 <body>
   <div class="wrap">
     <section class="hero">
-      <div class="eyebrow">OpsDiff v0.4 Incident Report</div>
+      <div class="eyebrow">OpsDiff v0.5 Incident Report</div>
       <h1>Find what changed before it broke</h1>
       <p class="subtle">Snapshots: {{.Result.BeforePath}} -> {{.Result.AfterPath}}</p>
       <p class="subtle">Namespace: {{.Result.Namespace}} | Change window: {{fmtTime .Result.ChangeWindow.Start}} -> {{fmtTime .Result.ChangeWindow.End}}</p>
