@@ -9,10 +9,12 @@ The current repository implements the foundation for:
 - `opsdiff snapshot`
 - `opsdiff compare`
 - `opsdiff timeline`
+- `opsdiff explain`
 - `opsdiff doctor`
 - secret-safe normalization for Kubernetes resources
 - risk-aware diff output in table, JSON, and Markdown
 - runtime timeline correlation for Kubernetes events and pod signals
+- likely-cause ranking from diff plus runtime evidence
 
 ## Why CLI-first
 
@@ -39,6 +41,7 @@ kubectl credentials
   opsdiff doctor
   opsdiff snapshot
   opsdiff timeline
+  opsdiff explain
         |
         v
 Kubernetes collectors
@@ -50,6 +53,7 @@ runtime timeline events
         v
    diff engine
 signal timeline builder
+ explain scorer
         |
         v
 table / json / markdown report
@@ -88,6 +92,7 @@ table / json / markdown report
 - explain command
 - likely-cause ranking
 - symptom mapping
+- evidence-based score explanation
 
 `v0.4`
 
